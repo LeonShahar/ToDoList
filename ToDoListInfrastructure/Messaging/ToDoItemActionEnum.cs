@@ -3,10 +3,14 @@
     public enum ToDoItemActionEnum
     {
         None = 0,
-        AddToDoItem = 1,
-        DeleteToDoItem = 2,
-        UpdateToDoItem = 3,
-        ViewAllItems = 4,
-        ViewPersons = 5,
+        AddPerson = 1,
+        AddToDoItem = 2,
+        DeleteToDoItem = 3,
+        UpdateToDoItem = 4,
+        ViewAllItems = 5,
+        ViewPersons = 6,
+        DeletePerson = 7,
+        DeletePersonAllItems = 8,
+        GetPerson = 9,
     }
 }

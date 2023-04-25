@@ -9,7 +9,6 @@ namespace ToDoListInfrastructure.Messaging
     {
         #region private members
 
-        private readonly string _replyQueueName;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _callbackMapper = new();
 
         #endregion
@@ -18,24 +17,23 @@ namespace ToDoListInfrastructure.Messaging
 
         public RabbitPublisher() : base()
         {
-            var consummer = new EventingBasicConsumer(_rabbitModel);
-            _rabbitModel.BasicConsume(queue: ConnectionDescriptor.Queue, autoAck: false, consumer: consummer);
-
-            _replyQueueName = _rabbitModel.QueueDeclare().QueueName;
+            _rabbitModel.QueueDeclare(queue: ConnectionDescriptor.CallbackQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
+            _rabbitModel.QueueBind(ConnectionDescriptor.CallbackQueue, ConnectionDescriptor.Excahnge, ConnectionDescriptor.CallbackRoutingKey);
+            _rabbitModel.QueuePurge(ConnectionDescriptor.CallbackQueue);
 
             var consumer = new EventingBasicConsumer(_rabbitModel);
+
             consumer.Received += (model, ea) =>
             {
                 if (!_callbackMapper.TryRemove(ea.BasicProperties.CorrelationId, out var tcs))
                     return;
+                
                 var body = ea.Body.ToArray();
                 var response = Encoding.UTF8.GetString(body);
                 tcs.TrySetResult(response);
             };
 
-            _rabbitModel.BasicConsume(consumer: consumer,
-                                 queue: _replyQueueName,
-                                 autoAck: true);
+            _rabbitModel.BasicConsume(queue: ConnectionDescriptor.CallbackQueue, autoAck: false, consumer: consumer);
         }
 
         public Task<string> SendMessageAsync(string message, CancellationToken cancellationToken = default)
@@ -45,8 +43,9 @@ namespace ToDoListInfrastructure.Messaging
 
             IBasicProperties props = _rabbitModel.CreateBasicProperties();
             var correlationId = Guid.NewGuid().ToString();
+            props.Persistent = false;
             props.CorrelationId = correlationId;
-            props.ReplyTo = _replyQueueName;
+            props.ReplyTo = ConnectionDescriptor.CallbackQueue;
             var messageBytes = Encoding.UTF8.GetBytes(message);
             var tcs = new TaskCompletionSource<string>();
             _callbackMapper.TryAdd(correlationId, tcs);
@@ -58,12 +57,8 @@ namespace ToDoListInfrastructure.Messaging
 
             cancellationToken.Register(() => _callbackMapper.TryRemove(correlationId, out _));
 
-            return tcs.Task;
+            return cancellationToken == default ? tcs.Task : tcs.Task.WaitAsync(cancellationToken);
         }
-
-        #endregion
-
-        #region public methods
 
         #endregion
     }

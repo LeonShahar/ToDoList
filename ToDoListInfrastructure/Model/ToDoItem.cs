@@ -5,7 +5,7 @@ namespace ToDoListInfrastructure.Model
 {
     [Table("ToDoItem")]
     [Owned]
-    public sealed class ToDoItem
+    public sealed class ToDoItem : ToDoItemDescriptor
     {
         #region public properties
         public int ID { get; set; }
@@ -13,14 +13,19 @@ namespace ToDoListInfrastructure.Model
         [ForeignKey("PersonID")]
         public int PersonID { get; set; }
 
-        public PriorityEnum Priority { get; set; } = PriorityEnum.None;
+        #endregion
 
-        public StatusEnum Status { get; set; } = StatusEnum.None;
+        #region ctor
 
-        public string Name { get; set; } = string.Empty;
+        public ToDoItem() : base()
+        {
 
-        public string Description { get; set; } = string.Empty;
+        }
 
+        public ToDoItem(ToDoItemDescriptor itemDescriptor, int personID) : base(itemDescriptor)
+        {
+            PersonID = personID;
+        }
         #endregion
     }
 }

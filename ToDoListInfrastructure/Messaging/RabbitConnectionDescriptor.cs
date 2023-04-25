@@ -10,7 +10,11 @@
 
         public string Queue { get; } = "ToDoList";
 
+        public string CallbackQueue { get; } = "ToDoListCallback";
+
         public string RoutingKey { get; } = "ToDoList";
+
+        public string CallbackRoutingKey { get; } = "ToDoList_Callback";
 
         #endregion
     }

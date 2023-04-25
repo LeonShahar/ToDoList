@@ -12,7 +12,6 @@ namespace ToDoListInfrastructure.Messaging
 
         #endregion
 
-
         #region ctor
 
         public RabbitConsumer() : base()
@@ -71,10 +70,12 @@ namespace ToDoListInfrastructure.Messaging
             finally
             {
                 var responseBytes = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(responseMessage) ? "{}" : responseMessage);
+                
                 _rabbitModel.BasicPublish(exchange: ConnectionDescriptor.Excahnge,
-                                     routingKey: props.ReplyTo,
-                                     basicProperties: replyProps,
-                                     body: responseBytes);
+                    routingKey: ConnectionDescriptor.CallbackRoutingKey,
+                    basicProperties: replyProps,
+                    body: responseBytes);
+                
                 _rabbitModel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
             }
         }

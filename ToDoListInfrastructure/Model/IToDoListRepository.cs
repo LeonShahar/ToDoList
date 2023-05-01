@@ -4,11 +4,11 @@
     {
         List<Person> GetAllPersons();
 
-        bool AddPerson(string firatName, string lastName);
+        bool AddPerson(string? firatName, string? lastName);
 
         bool DeleteUser(int userId);
 
-        bool AddToDoItem(int userId, ToDoItemDescriptor toDoItem);
+        bool AddToDoItem(int userId, ToDoItemDescriptor? toDoItem);
 
         List<ToDoItem> GetUserToDoItems(int userId);
 
@@ -16,7 +16,7 @@
 
         bool DeleteUserToDoItemsbool(int userId);
 
-        Person? GetPersonByName(string firstName, string lastName);
+        Person? GetPersonByName(string? firstName, string? lastName);
 
         Person? GetPersonById(int userId);
     }

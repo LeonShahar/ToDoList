@@ -8,7 +8,7 @@ namespace ToDoListInfrastructure.Messaging
     {
         #region private members
         
-        private Func<string, string>? _messageHandler;
+        private Func<string, Task<string>>? _messageHandler;
 
         #endregion
 
@@ -30,14 +30,15 @@ namespace ToDoListInfrastructure.Messaging
                                 arguments: null,
                                 consumer: consumer);
 
-            consumer.Received += Consummer_Received;
+
+            consumer.Received += Consumer_Received;
         }
 
         #endregion
 
         #region public methods
 
-        public void Start(Func<string, string> messageHandler)
+        public void Start(Func<string, Task<string>> messageHandler)
         {
             _messageHandler = messageHandler;
         }
@@ -46,10 +47,13 @@ namespace ToDoListInfrastructure.Messaging
 
         #region private methods
 
-        private void Consummer_Received(object? sender, BasicDeliverEventArgs ea)
+        private void Consumer_Received(object? sender, BasicDeliverEventArgs ea)
         {
             if (_rabbitModel == null)
                 throw new NullReferenceException(nameof(_rabbitModel));
+
+            if (_messageHandler == null)
+                throw new NullReferenceException(nameof(_messageHandler));
 
             var body = ea.Body.ToArray();
             var props = ea.BasicProperties;
@@ -60,7 +64,7 @@ namespace ToDoListInfrastructure.Messaging
             try
             {
                 var message = Encoding.UTF8.GetString(body);
-                responseMessage = _messageHandler?.Invoke(message);
+                responseMessage = _messageHandler.Invoke(message).Result;
             }
             catch (Exception e)
             {
@@ -70,12 +74,12 @@ namespace ToDoListInfrastructure.Messaging
             finally
             {
                 var responseBytes = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(responseMessage) ? "{}" : responseMessage);
-                
+
                 _rabbitModel.BasicPublish(exchange: ConnectionDescriptor.Excahnge,
                     routingKey: ConnectionDescriptor.CallbackRoutingKey,
                     basicProperties: replyProps,
                     body: responseBytes);
-                
+
                 _rabbitModel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
             }
         }

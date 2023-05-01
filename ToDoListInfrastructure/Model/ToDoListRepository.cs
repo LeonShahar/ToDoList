@@ -3,6 +3,7 @@
     public class ToDoListRepository : IToDoListRepository
     {
         private readonly ToDoListDbContext _toDoListDbContext;
+        private readonly object _dbContextLock = new object();
 
         #region ctor
 
@@ -14,17 +15,26 @@
 
         public List<Person> GetAllPersons()
         {
-            return _toDoListDbContext.Persons.Select(p => p).ToList();
+            lock (_dbContextLock)
+            {
+                return _toDoListDbContext.Persons.Select(p => p).ToList();
+            }
         }
 
-        public bool AddPerson(string firstName, string lastName)
+        public bool AddPerson(string? firstName, string? lastName)
         {
+            if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
+                throw new ArgumentNullException($"{nameof(firstName)}-{lastName}");
+
             var person = GetPersonByName(firstName, lastName);
             if (person == null)
             {
-                _toDoListDbContext.Persons.Add(new Person { FirstName = firstName, LastName = lastName });
-                _toDoListDbContext.SaveChanges();
-                return true;
+                lock (_dbContextLock)
+                {
+                    _toDoListDbContext.Persons.Add(new Person { FirstName = firstName, LastName = lastName });
+                    _toDoListDbContext.SaveChanges();
+                    return true;
+                }
             }
 
             return false;
@@ -32,24 +42,32 @@
 
         public bool DeleteUser(int personId)
         {
-
             var person = GetPersonById(personId);
             if (person == null)
             {
                 return false;
             }
 
-            _toDoListDbContext.Persons.Remove(person);
-            _toDoListDbContext.SaveChanges();
-            return true;
+            lock (_dbContextLock)
+            {
+                _toDoListDbContext.Persons.Remove(person);
+                _toDoListDbContext.SaveChanges();
+                return true;
+            }
         }
 
-        public bool AddToDoItem(int personId, ToDoItemDescriptor toDoItem)
+        public bool AddToDoItem(int personId, ToDoItemDescriptor? toDoItem)
         {
-            var item = new ToDoItem(toDoItem, personId);
-            _toDoListDbContext.ToDoItems.Add(item);
-            _toDoListDbContext.SaveChanges();
-            return true;
+            if (toDoItem  == null)
+                throw new ArgumentNullException(nameof(toDoItem));
+
+            lock (_dbContextLock)
+            {
+                var item = new ToDoItem(toDoItem, personId);
+                _toDoListDbContext.ToDoItems.Add(item);
+                _toDoListDbContext.SaveChanges();
+                return true;
+            }
         }
 
         public List<ToDoItem> GetUserToDoItems(int personId)
@@ -57,10 +75,13 @@
             var items = new List<ToDoItem>();
             try
             {
-                var person = _toDoListDbContext.Persons.Find(true, personId);
-                if (person != null)
+                lock (_dbContextLock)
                 {
-                    items.AddRange(_toDoListDbContext.ToDoItems.Where<ToDoItem>(i => i.PersonID == personId));
+                    var person = _toDoListDbContext.Persons.Find(true, personId);
+                    if (person != null)
+                    {
+                        items.AddRange(_toDoListDbContext.ToDoItems.Where<ToDoItem>(i => i.PersonID == personId));
+                    }
                 }
             }
             catch (Exception ex)
@@ -73,37 +94,47 @@
 
         public bool DeleteToDoItem(int personId, int itemId)
         {
-            var toDoItem = _toDoListDbContext.ToDoItems.FirstOrDefault(i => i.ID == itemId && i.PersonID == personId);
-            if (toDoItem != null)
+            lock (_dbContextLock)
             {
-                _toDoListDbContext.Remove(toDoItem.ID);
-                _toDoListDbContext.SaveChanges();
+                var toDoItem = _toDoListDbContext.ToDoItems.FirstOrDefault(i => i.ID == itemId && i.PersonID == personId);
+                if (toDoItem != null)
+                {
+                    _toDoListDbContext.Remove(toDoItem.ID);
+                    _toDoListDbContext.SaveChanges();
+                }
+                return true;
             }
-            return true;
         }
 
         public bool DeleteUserToDoItemsbool(int personId)
         {
-            var items = _toDoListDbContext.ToDoItems.Where(i => i.PersonID == personId);
-            if (items != null)
+            lock (_dbContextLock)
             {
-                _toDoListDbContext.ToDoItems.RemoveRange(items);
-                _toDoListDbContext.SaveChanges();
-            }
+                var items = _toDoListDbContext.ToDoItems.Where(i => i.PersonID == personId);
+                if (items != null)
+                {
+                    _toDoListDbContext.ToDoItems.RemoveRange(items);
+                    _toDoListDbContext.SaveChanges();
+                }
 
-            return true;
+                return true;
+            }
         }
 
-        public Person? GetPersonByName(string firstName, string lastName)
+        public Person? GetPersonByName(string? firstName, string? lastName)
         {
-            return _toDoListDbContext.Persons.FirstOrDefault(p => p.FirstName == firstName && p.LastName == lastName);
+            lock (_dbContextLock)
+            {
+                return _toDoListDbContext.Persons.FirstOrDefault(p => p.FirstName == firstName && p.LastName == lastName);
+            }
         }
 
         public Person? GetPersonById(int personId)
         {
-            return _toDoListDbContext.Persons.Find(true, personId);
+            lock (_dbContextLock)
+            {
+                return _toDoListDbContext.Persons.Find(true, personId);
+            }
         }
-
-
     }
 }

@@ -21,18 +21,19 @@ namespace ToDoListWebApp.Managers
 
         #region ctor
 
-        public ToDoListManager(RabbitPublisher publisher)
+        public ToDoListManager(IHostApplicationLifetime hostAppLifetime, RabbitPublisher publisher)
         {
             _pblisher = publisher;
+            hostAppLifetime.ApplicationStopping.Register(_pblisher.Dispose);
 
-            CancellationTimeout = 5000;
+            CancellationTimeout = 1000;
         }
 
         #endregion
 
         #region IToDoListManager implementation
-
-        public async Task<List<Person>> GetAllPersonsAsync()
+        
+        public async Task<List<Person>?> GetAllPersonsAsync()
         {
             var request = new ToDoItemAction
             {
@@ -40,7 +41,7 @@ namespace ToDoListWebApp.Managers
                 RequestAction = ToDoItemActionEnum.ViewPersons
             };
 
-            var allPersons = await SendRequestAsync<List<Person>>(request, new CancellationTokenSource(CancellationTimeout).Token);
+            var allPersons = await SendRequestAsync<List<Person>?>(request, new CancellationTokenSource(CancellationTimeout).Token);
 
             return allPersons;
         }
@@ -91,7 +92,7 @@ namespace ToDoListWebApp.Managers
             }
         }
 
-        public async Task<List<ToDoItem>> GetUserToDoItemsAsync(int personId)
+        public async Task<List<ToDoItem>?> GetUserToDoItemsAsync(int personId)
         {
             var request = new ToDoItemAction
             {
@@ -99,7 +100,7 @@ namespace ToDoListWebApp.Managers
                 RequestAction = ToDoItemActionEnum.ViewAllItems
             };
 
-            var items = await SendRequestAsync<List<ToDoItem>>(request, new CancellationTokenSource(CancellationTimeout).Token);
+            var items = await SendRequestAsync<List<ToDoItem>?>(request, new CancellationTokenSource(CancellationTimeout).Token);
 
             return items;
         }
@@ -131,7 +132,7 @@ namespace ToDoListWebApp.Managers
 
         #region private methods
 
-        private async Task<T> SendRequestAsync<T>(ToDoItemAction request, CancellationToken cancellationToken = default)
+        private async Task<T?> SendRequestAsync<T>(ToDoItemAction request, CancellationToken cancellationToken = default)
         {
             var jsonRequest = JsonConvert.SerializeObject(request);
             var response = await _pblisher.SendMessageAsync(jsonRequest, cancellationToken);

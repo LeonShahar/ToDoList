@@ -32,7 +32,7 @@ namespace ToDoListRepo
                         .AddSingleton<ToDoListDbContext>()
                         .AddSingleton<IToDoListRepository, ToDoListRepository>()
                         .AddDbContext<ToDoListDbContext>(options => options.UseInMemoryDatabase("ToDoListItems"))
-                        .AddSingleton<RabbitConsumer>(new RabbitConsumer())
+                        .AddSingleton<RabbitConsumer>(/*new RabbitConsumer()*/)
                         .AddHostedService<ToDoListRepoService>())
                         .ConfigureServices(services => services.AddSingleton<ToDoListRepoService>());
         }

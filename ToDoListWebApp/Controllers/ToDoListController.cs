@@ -19,7 +19,7 @@ namespace ToDoListWebApp.Controllers
         public ToDoListController(IToDoListManager manager)
         {
             _toDoListManager = manager;
-            _toDoListManager.CancellationTimeout = 10000;
+            _toDoListManager.CancellationTimeout = 1000;
         }
         #endregion
 

@@ -14,17 +14,19 @@ namespace ToDoListRepo
         private readonly RabbitConsumer? _rabbitConsumer;
         private readonly IToDoListRepository? _databaseRepo;
 
-        private readonly Dictionary<ToDoItemActionEnum, Func<ToDoItemAction, string>> _actionHandlers;
+        private readonly Dictionary<ToDoItemActionEnum, Func<ToDoItemAction, Task<string>>> _actionHandlers;
         #endregion
 
         #region ctor
 
-        public ToDoListRepoService(RabbitConsumer rabbitConsumer, IToDoListRepository databaseRepo) 
+        public ToDoListRepoService(IHostApplicationLifetime hostAppLifetime, RabbitConsumer rabbitConsumer, IToDoListRepository databaseRepo) 
         { 
             _rabbitConsumer = rabbitConsumer;
-            _rabbitConsumer.Start(RabbitMessageHandler);
+            hostAppLifetime.ApplicationStopping.Register(_rabbitConsumer.Dispose);
 
-            _actionHandlers = new Dictionary<ToDoItemActionEnum, Func<ToDoItemAction, string>>
+            object value = Task.Run(() => _rabbitConsumer.Start(RabbitMessageHandler));
+
+            _actionHandlers = new Dictionary<ToDoItemActionEnum, Func<ToDoItemAction, Task<string>>>
             {
                 {ToDoItemActionEnum.AddPerson, AddPerson },
                 { ToDoItemActionEnum.AddToDoItem, AddToDoItem },
@@ -67,66 +69,84 @@ namespace ToDoListRepo
 
         #region private methods
 
-        private string RabbitMessageHandler(string message)
+        private async Task<string> RabbitMessageHandler(string message)
         {
             if (_databaseRepo == null)
                 throw new NullReferenceException(nameof(_databaseRepo));
 
             var request = JsonConvert.DeserializeObject<ToDoItemAction>(message);
 
-            return request != null ? _actionHandlers[request.RequestAction](request) : string.Empty;
+            if (request == null)
+                return string.Empty;
+
+            return await _actionHandlers[request.RequestAction](request);
         }
 
-        private string AddPerson(ToDoItemAction request)
+        private async Task<string> AddPerson(ToDoItemAction request)
         {
-            _databaseRepo?.AddPerson(request.FirstName, request.LastName);
-            var person = _databaseRepo.GetPersonByName(request.FirstName, request.LastName);
+            var jsonPerson = string.Empty;
 
-            return person != null ? JsonConvert.SerializeObject(person) : string.Empty;
+            await Task.Run(() =>
+            {
+                _databaseRepo?.AddPerson(request.FirstName, request.LastName);
+                var person = _databaseRepo?.GetPersonByName(request.FirstName, request.LastName);
+
+                jsonPerson = person != null ? JsonConvert.SerializeObject(person) : string.Empty;
+            });
+
+            return jsonPerson;
         }
 
-        private string AddToDoItem(ToDoItemAction request)
+        private async Task<string> AddToDoItem(ToDoItemAction request)
         {
-            return _databaseRepo.AddToDoItem(request.PersonId, request.ToDoItem) ? "Success" : "Failed";
+            if (request == null)
+                return string.Empty;
+
+            return await Task.Run(() =>_databaseRepo?.AddToDoItem(request.PersonId, request.ToDoItem) == true ? "Success" : "Failed");
         }
 
-        private string UpdateToDoItem(ToDoItemAction request)
+        private async Task<string> UpdateToDoItem(ToDoItemAction request)
         {
-
-            return string.Empty;
+            return await Task.Run(()=> string.Empty);
         }
 
-        private string ViewAllItems(ToDoItemAction request)
+        private async Task<string> ViewAllItems(ToDoItemAction request)
         {
-
-            return string.Empty;
+            return await Task.Run(() => string.Empty);
         }
 
-        private string ViewPersons(ToDoItemAction request)
+        private async Task<string> ViewPersons(ToDoItemAction request)
         {
-            var items = _databaseRepo.GetAllPersons();
-
-            var jsonResponse = JsonConvert.SerializeObject(items, Formatting.Indented);
+            var jsonResponse = string.Empty;
+            await Task.Run(() => 
+            {
+                var items = _databaseRepo?.GetAllPersons();
+                jsonResponse = JsonConvert.SerializeObject(items, Formatting.Indented);
+            });
 
             return jsonResponse;
         }
 
-        private string DeleteUser(ToDoItemAction request)
+        private async Task<string> DeleteUser(ToDoItemAction request)
         {
-
-            return string.Empty;
+            return await Task.Run(() => string.Empty);
         }
 
-        private string DeleteUserAllItems(ToDoItemAction request)
+        async Task<string> DeleteUserAllItems(ToDoItemAction request)
         {
-
-            return string.Empty;
+            return await Task.Run(() => string.Empty);
         }
 
-        private string GetPerson(ToDoItemAction request)
+        private async Task<string> GetPerson(ToDoItemAction request)
         {
-            var person = _databaseRepo.GetPersonByName(request.FirstName, request.LastName);
-            var jsonPerson = JsonConvert.SerializeObject(person, Formatting.Indented);
+            var jsonPerson = string.Empty;
+
+            await Task.Run(() =>
+            {
+                var person = _databaseRepo?.GetPersonByName(request.FirstName, request.LastName);
+                jsonPerson = JsonConvert.SerializeObject(person, Formatting.Indented);
+            });
+
             return jsonPerson;
         }
         #endregion

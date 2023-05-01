@@ -17,6 +17,9 @@ namespace ToDoListInfrastructure.Messaging
 
         public RabbitPublisher() : base()
         {
+            if (_rabbitModel == null)
+                throw new ArgumentNullException(nameof(_rabbitModel));
+
             _rabbitModel.QueueDeclare(queue: ConnectionDescriptor.CallbackQueue, durable: false, exclusive: false, autoDelete: false, arguments: null);
             _rabbitModel.QueueBind(ConnectionDescriptor.CallbackQueue, ConnectionDescriptor.Excahnge, ConnectionDescriptor.CallbackRoutingKey);
             _rabbitModel.QueuePurge(ConnectionDescriptor.CallbackQueue);

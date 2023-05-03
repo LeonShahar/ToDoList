@@ -1,10 +1,12 @@
-﻿namespace ToDoListInfrastructure.Model
+﻿using ToDoListInfrastructure.Model;
+
+namespace ToDoListRepo.Interfaces
 {
-    public  interface IToDoListRepository
+    public interface IToDoListRepository
     {
         List<Person> GetAllPersons();
 
-        bool AddPerson(string? firatName, string? lastName);
+        Person? AddPerson(string? firatName, string? lastName);
 
         bool DeleteUser(int userId);
 

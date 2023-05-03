@@ -1,4 +1,7 @@
-﻿namespace ToDoListInfrastructure.Model
+﻿using ToDoListInfrastructure.Model;
+using ToDoListRepo.Interfaces;
+
+namespace ToDoListRepo.Repositories
 {
     public class ToDoListRepository : IToDoListRepository
     {
@@ -21,23 +24,24 @@
             }
         }
 
-        public bool AddPerson(string? firstName, string? lastName)
+        public Person? AddPerson(string? firstName, string? lastName)
         {
             if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
                 throw new ArgumentNullException($"{nameof(firstName)}-{lastName}");
 
-            var person = GetPersonByName(firstName, lastName);
+            var person = _toDoListDbContext.Persons.FirstOrDefault(p => p.FirstName == firstName && p.LastName == lastName);
             if (person == null)
             {
                 lock (_dbContextLock)
                 {
                     _toDoListDbContext.Persons.Add(new Person { FirstName = firstName, LastName = lastName });
                     _toDoListDbContext.SaveChanges();
-                    return true;
+
+                    person = _toDoListDbContext.Persons.FirstOrDefault(p => p.FirstName == firstName && p.LastName == lastName);
                 }
             }
 
-            return false;
+            return person;
         }
 
         public bool DeleteUser(int personId)
@@ -58,7 +62,7 @@
 
         public bool AddToDoItem(int personId, ToDoItemDescriptor? toDoItem)
         {
-            if (toDoItem  == null)
+            if (toDoItem == null)
                 throw new ArgumentNullException(nameof(toDoItem));
 
             lock (_dbContextLock)

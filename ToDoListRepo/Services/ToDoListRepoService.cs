@@ -2,8 +2,9 @@
 using Newtonsoft.Json;
 using ToDoListInfrastructure.Messaging;
 using ToDoListInfrastructure.Model;
+using ToDoListRepo.Interfaces;
 
-namespace ToDoListRepo
+namespace ToDoListRepo.Services
 {
     internal sealed class ToDoListRepoService : IHostedService
     {
@@ -19,8 +20,8 @@ namespace ToDoListRepo
 
         #region ctor
 
-        public ToDoListRepoService(IHostApplicationLifetime hostAppLifetime, RabbitConsumer rabbitConsumer, IToDoListRepository databaseRepo) 
-        { 
+        public ToDoListRepoService(IHostApplicationLifetime hostAppLifetime, RabbitConsumer rabbitConsumer, IToDoListRepository databaseRepo)
+        {
             _rabbitConsumer = rabbitConsumer;
             hostAppLifetime.ApplicationStopping.Register(_rabbitConsumer.Dispose);
 
@@ -88,8 +89,7 @@ namespace ToDoListRepo
 
             await Task.Run(() =>
             {
-                _databaseRepo?.AddPerson(request.FirstName, request.LastName);
-                var person = _databaseRepo?.GetPersonByName(request.FirstName, request.LastName);
+                var person = _databaseRepo?.AddPerson(request.FirstName, request.LastName);
 
                 jsonPerson = person != null ? JsonConvert.SerializeObject(person) : string.Empty;
             });
@@ -102,12 +102,12 @@ namespace ToDoListRepo
             if (request == null)
                 return string.Empty;
 
-            return await Task.Run(() =>_databaseRepo?.AddToDoItem(request.PersonId, request.ToDoItem) == true ? "Success" : "Failed");
+            return await Task.Run(() => _databaseRepo?.AddToDoItem(request.PersonId, request.ToDoItem) == true ? "Success" : "Failed");
         }
 
         private async Task<string> UpdateToDoItem(ToDoItemAction request)
         {
-            return await Task.Run(()=> string.Empty);
+            return await Task.Run(() => string.Empty);
         }
 
         private async Task<string> ViewAllItems(ToDoItemAction request)
@@ -118,7 +118,7 @@ namespace ToDoListRepo
         private async Task<string> ViewPersons(ToDoItemAction request)
         {
             var jsonResponse = string.Empty;
-            await Task.Run(() => 
+            await Task.Run(() =>
             {
                 var items = _databaseRepo?.GetAllPersons();
                 jsonResponse = JsonConvert.SerializeObject(items, Formatting.Indented);

@@ -4,6 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ToDoListInfrastructure.Messaging;
 using ToDoListInfrastructure.Model;
+using ToDoListRepo.Interfaces;
+using ToDoListRepo.Repositories;
+using ToDoListRepo.Services;
 
 namespace ToDoListRepo
 {
